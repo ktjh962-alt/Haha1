@@ -1,0 +1,202 @@
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local pg = player:WaitForChild("PlayerGui")
+
+-- Don GUI cu
+local old = pg:FindFirstChild("HalloweenFarm")
+if old then old:Destroy() end
+
+local houses = {
+    {name="Nha 1", pos=Vector3.new(-1917.52,-18.53,11268.84)},
+    {name="Nha 2", pos=Vector3.new(-1874.38,-18.53,11317.94)},
+    {name="Nha 3", pos=Vector3.new(-1873.94,-18.53,11363.02)},
+    {name="Nha 4", pos=Vector3.new(-1805.27,-18.52,11321.10)},
+    {name="Nha 5", pos=Vector3.new(-1799.94,-18.51,11360.45)},
+    {name="Nha 6", pos=Vector3.new(-1995.38,-18.50,11361.45)},
+    {name="Nha 7", pos=Vector3.new(-2077.55,-18.53,11350.96)}
+}
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "HalloweenFarm"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 999
+gui.Parent = pg
+
+-- Icon noi
+local icon = Instance.new("TextButton")
+icon.Name = "FloatingIcon"
+icon.Size = UDim2.new(0,52,0,52)
+icon.Position = UDim2.new(0,18,0.45,0)
+icon.Text = "🎃"
+icon.TextSize = 28
+icon.BackgroundColor3 = Color3.fromRGB(110,55,170)
+icon.TextColor3 = Color3.new(1,1,1)
+icon.Parent = gui
+icon.Active = true
+
+-- Menu
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,230,0,190)
+frame.Position = UDim2.new(0,78,0.3,0)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,40)
+frame.Visible = false
+frame.Parent = gui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,32)
+title.Text = "HALLOWEEN AUTO TP"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundColor3 = Color3.fromRGB(90,50,150)
+title.Parent = frame
+
+local minimize = Instance.new("TextButton")
+minimize.Size = UDim2.new(0,35,0,30)
+minimize.Position = UDim2.new(1,-36,0,1)
+minimize.Text = "—"
+minimize.Parent = frame
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1,-10,0,38)
+status.Position = UDim2.new(0,5,0,38)
+status.Text = "Trang thai: STOP"
+status.TextColor3 = Color3.new(1,1,1)
+status.BackgroundTransparency = 1
+status.Parent = frame
+
+local start = Instance.new("TextButton")
+start.Size = UDim2.new(0.44,0,0,38)
+start.Position = UDim2.new(0.04,0,0,82)
+start.Text = "START"
+start.Parent = frame
+
+local stop = Instance.new("TextButton")
+stop.Size = UDim2.new(0.44,0,0,38)
+stop.Position = UDim2.new(0.52,0,0,82)
+stop.Text = "STOP"
+stop.Parent = frame
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0.92,0,0,30)
+close.Position = UDim2.new(0.04,0,0,130)
+close.Text = "DONG SCRIPT"
+close.Parent = frame
+
+-- Keo icon bang cam ung
+local dragging = false
+local moved = false
+local startInputPos
+local startGuiPos
+local activeInput
+
+icon.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        moved = false
+        activeInput = input
+        startInputPos = input.Position
+        startGuiPos = icon.Position
+    end
+end)
+
+icon.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseMovement then
+        activeInput = input
+    end
+end)
+
+local function updateDrag(input)
+    if not dragging or not startInputPos then return end
+    local delta = input.Position - startInputPos
+    if math.abs(delta.X) > 5 or math.abs(delta.Y) > 5 then
+        moved = true
+    end
+    icon.Position = UDim2.new(
+        startGuiPos.X.Scale, startGuiPos.X.Offset + delta.X,
+        startGuiPos.Y.Scale, startGuiPos.Y.Offset + delta.Y
+    )
+end
+
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        updateDrag(input)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input == activeInput
+        or input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if dragging then
+            dragging = false
+            if not moved then
+                frame.Visible = not frame.Visible
+            end
+        end
+    end
+end)
+
+minimize.Activated:Connect(function()
+    frame.Visible = false
+end)
+
+-- Auto TP
+local running = false
+local session = 0
+
+local function teleport(pos)
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    root.CFrame = CFrame.new(pos)
+    return true
+end
+
+start.Activated:Connect(function()
+    if running then return end
+    running = true
+    session += 1
+    local mySession = session
+
+    task.spawn(function()
+        while running and session == mySession do
+            for i, house in ipairs(houses) do
+                if not running or session ~= mySession then break end
+
+                if teleport(house.pos) then
+                    local finish = os.clock() + 3
+                    while running and session == mySession
+                        and os.clock() < finish do
+                        status.Text = house.name .. " | Dung " ..
+                            math.ceil(finish - os.clock()) .. "s"
+                        task.wait(0.1)
+                    end
+                else
+                    status.Text = "Khong tim thay nhan vat"
+                    task.wait(1)
+                end
+            end
+        end
+        if session == mySession then
+            status.Text = "Trang thai: STOP"
+        end
+    end)
+end)
+
+stop.Activated:Connect(function()
+    running = false
+    session += 1
+    status.Text = "Trang thai: STOP"
+end)
+
+close.Activated:Connect(function()
+    running = false
+    session += 1
+    gui:Destroy()
+end)
+
+print("Halloween Auto TP loaded")
